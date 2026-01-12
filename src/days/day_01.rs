@@ -48,24 +48,23 @@ pub fn part_2() {
 
 #[cfg(test)]
 mod test {
-    const EXAMPLE_1: &str = "3   4
-    4   3
-    2   5
-    1   3
-    3   9
-    3   3";
+    use indoc::indoc;
+
+    const EXAMPLE_1: &str = indoc! {"
+        3   4
+        4   3
+        2   5
+        1   3
+        3   9
+        3   3
+    "};
 
     #[test]
     fn test_part_1() {
         super::solve_part_1(EXAMPLE_1);
     }
 
-    const EXAMPLE_2: &str = "3   4
-    4   3
-    2   5
-    1   3
-    3   9
-    3   3";
+    const EXAMPLE_2: &str = EXAMPLE_1;
 
     #[test]
     fn test_part_2() {
