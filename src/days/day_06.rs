@@ -28,8 +28,6 @@ fn parse_input(input: &str) -> (Vec<(i32, i32)>, (i32, i32)) {
 
 fn solve_part_1(input: &str) {
     let (obstacles, mut guard) = parse_input(input);
-    // println!("{:?}", obstacles);
-    // println!("{:?}", guard);
 
     let lmax = input.lines().count() as i32;
     let cmax = input.lines().next().unwrap().len() as i32;
@@ -63,8 +61,6 @@ fn solve_part_1(input: &str) {
 
 fn solve_part_2(input: &str) {
     let (mut obstacles, guard_init) = parse_input(input);
-    // println!("{:?}", obstacles);
-    // println!("{:?}", guard);
 
     let lmax = input.lines().count() as i32;
     let cmax = input.lines().next().unwrap().len() as i32;
@@ -96,6 +92,8 @@ fn solve_part_2(input: &str) {
             guard = next;
         }
     }
+
+    visited.remove(&guard_init);
 
     let mut count = 0;
     for (i, (gl, gc)) in visited.keys().enumerate() {
