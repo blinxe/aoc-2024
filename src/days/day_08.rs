@@ -38,8 +38,8 @@ fn parse_input(input: &str) -> (Coord, HashMap<char, Vec<Coord>>) {
     (size, map)
 }
 
-fn find_antinodes(a1: &Coord, a2: &Coord) -> (Coord, Coord) {
-    (
+fn find_antinodes(a1: &Coord, a2: &Coord) -> [Coord; 2] {
+    [
         Coord {
             x: 2 * a1.x - a2.x,
             y: 2 * a1.y - a2.y,
@@ -48,21 +48,19 @@ fn find_antinodes(a1: &Coord, a2: &Coord) -> (Coord, Coord) {
             x: 2 * a2.x - a1.x,
             y: 2 * a2.y - a1.y,
         },
-    )
+    ]
 }
 
 fn solve_part_1(input: &str) {
     let (size, map) = parse_input(input);
 
     let mut antinodes = HashSet::new();
-    for (k, v) in map {
+    for v in map.values() {
         for c in v.iter().combinations(2) {
-            let (an1, an2) = find_antinodes(c[0], c[1]);
-            if an1.is_in_map(&size) {
-                antinodes.insert(an1);
-            }
-            if an2.is_in_map(&size) {
-                antinodes.insert(an2);
+            for an in find_antinodes(c[0], c[1]) {
+                if an.is_in_map(&size) {
+                    antinodes.insert(an);
+                }
             }
         }
     }
@@ -98,7 +96,7 @@ fn solve_part_2(input: &str) {
     let (size, map) = parse_input(input);
 
     let mut antinodes = HashSet::new();
-    for (k, v) in map {
+    for v in map.values() {
         for c in v.iter().combinations(2) {
             antinodes.extend(find_antinodes_v2(c[0], c[1], &size));
         }
