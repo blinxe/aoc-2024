@@ -1,4 +1,5 @@
-use std::{collections::HashMap, usize, vec};
+use memoize::memoize;
+use std::vec;
 
 use crate::utils::input::read_input;
 
@@ -9,6 +10,7 @@ fn parse_input(input: &str) -> Vec<usize> {
         .collect()
 }
 
+#[memoize]
 fn apply_rules(stone: usize) -> Vec<usize> {
     if stone == 0 {
         vec![1]
@@ -31,29 +33,14 @@ fn blink(stones: Vec<usize>, number: u8) -> Vec<usize> {
     return new_stones;
 }
 
-fn get_cache(cache: &mut HashMap<usize, HashMap<u8, usize>>, stone: usize, round: u8) -> usize {
-    if !cache.contains_key(&stone) {
-        cache.insert(stone, HashMap::new());
-    }
-    if cache.get(&stone).unwrap().contains_key(&round) {
-        return *cache.get(&stone).unwrap().get(&round).unwrap();
-    }
+#[memoize]
+fn get(stone: usize, round: u8) -> usize {
     if round == 1 {
         return apply_rules(stone).len();
     }
     let mut sum = 0;
     for s in apply_rules(stone) {
-        sum += get_cache(cache, s, round - 1);
-    }
-    cache.get_mut(&stone).unwrap().insert(round, sum);
-    sum
-}
-
-fn blink_v2(stones: Vec<usize>, number: u8) -> usize {
-    let mut cache = HashMap::new();
-    let mut sum = 0;
-    for s in stones {
-        sum += get_cache(&mut cache, s, number);
+        sum += get(s, round - 1);
     }
     sum
 }
@@ -66,7 +53,8 @@ fn solve_part_1(input: &str) {
 
 fn solve_part_2(input: &str) {
     let stones = parse_input(input);
-    println!("{:?}", blink_v2(stones, 75));
+    let sum: usize = stones.into_iter().map(|s| get(s, 75)).sum();
+    println!("{:?}", sum);
 }
 
 pub fn part_1() {
@@ -84,7 +72,7 @@ mod test {
     use indoc::indoc;
 
     const EXAMPLE_1: &str = indoc! {"
-    125 17
+        125 17
     "};
 
     #[test]

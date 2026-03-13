@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 indoc = "2.0.7"
 itertools = "0.14.0"
+memoize = "0.6.0"
 regex = "1.12.2"
