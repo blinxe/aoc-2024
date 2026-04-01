@@ -1,5 +1,7 @@
 use std::{cell::RefCell, collections::HashSet};
 
+use itertools::Itertools;
+
 use crate::utils::input::read_input;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -112,7 +114,88 @@ fn solve_part_1(input: &str) {
     println!("Price: {}", price);
 }
 
-fn solve_part_2(input: &str) {}
+fn get_neighborhood_4(grid: &Grid, plot: Plot) -> Vec<Plot> {
+    let mut neighbors = Vec::new();
+    for (dx, dy) in [(-1, 0), (0, -1), (1, 0), (0, 1)] {
+        let nx = plot.x + dx;
+        let ny = plot.y + dy;
+        if ny >= 0 && ny < grid.len() as isize && nx >= 0 && nx < grid[0].len() as isize {
+            if grid[ny as usize][nx as usize] == grid[plot.y as usize][plot.x as usize] {
+                neighbors.push(Plot {
+                    x: nx as isize,
+                    y: ny as isize,
+                })
+            }
+        }
+    }
+
+    neighbors
+}
+
+fn get_orthogonal_neighbors(neighbors: &Vec<Plot>) -> Vec<(Plot, Plot)> {
+    neighbors
+        .iter()
+        .combinations(2)
+        .filter_map(|pair| {
+            let p1 = pair[0];
+            let p2 = pair[1];
+            if p1.x != p2.x && p1.y != p2.y {
+                Some((*p1, *p2))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn plot_count_corners(grid: &Grid, p: Plot) -> usize {
+    let neighbors = get_neighborhood_4(grid, p);
+
+    match neighbors.len() {
+        0 => 4,
+        1 => 2,
+        2..=4 => {
+            let ortho_pairs = get_orthogonal_neighbors(&neighbors);
+            if ortho_pairs.len() == 0 {
+                0
+            } else {
+                let mut corners = if ortho_pairs.len() == 1 { 1 } else { 0 }; // here is an explanatory comment
+                for (p1, p2) in ortho_pairs {
+                    let diag_x;
+                    let diag_y;
+                    if p1.x == p.x {
+                        diag_x = p2.x;
+                        diag_y = p1.y;
+                    } else {
+                        diag_x = p1.x;
+                        diag_y = p2.y;
+                    }
+                    if grid[diag_y as usize][diag_x as usize] != grid[p1.y as usize][p1.x as usize]
+                    {
+                        corners += 1;
+                    }
+                }
+                corners
+            }
+        }
+        _ => panic!(),
+    }
+}
+
+fn solve_part_2(input: &str) {
+    let (grid, regions) = parse_input(input);
+    let price: usize = regions
+        .iter()
+        .map(|r| {
+            r.len()
+                * r.iter()
+                    .map(|p| plot_count_corners(&grid, *p))
+                    .sum::<usize>()
+        })
+        .sum();
+
+    println!("Price: {}", price);
+}
 
 pub fn part_1() {
     let input = read_input(module_path!());
