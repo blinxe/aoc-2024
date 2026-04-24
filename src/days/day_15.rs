@@ -13,10 +13,33 @@ type Action = char;
 type Grid = Vec<Vec<char>>;
 
 impl Pos {
+    const ZERO: Self = Self { x: 0, y: 0 };
+
     fn add_velocity(&self, velocity: &Velocity) -> Pos {
         Pos {
             x: (self.x as isize + velocity.x) as usize,
             y: (self.y as isize + velocity.y) as usize,
+        }
+    }
+
+    fn gps(&self) -> usize {
+        100 * self.y + self.x
+    }
+}
+
+impl Velocity {
+    const UP: Self = Self { x: 0, y: -1 };
+    const DOWN: Self = Self { x: 0, y: 1 };
+    const LEFT: Self = Self { x: -1, y: 0 };
+    const RIGHT: Self = Self { x: 1, y: 0 };
+
+    fn from(a: Action) -> Self {
+        match a {
+            '^' => Self::UP,
+            'v' => Self::DOWN,
+            '<' => Self::LEFT,
+            '>' => Self::RIGHT,
+            _ => panic!("Invalid action '{}'", a),
         }
     }
 }
@@ -48,13 +71,7 @@ fn parse_input(input: &str) -> (Grid, Vec<Action>) {
 
 fn try_move_robot(grid: &mut Grid, robot_pos: Pos, dir: Action) -> Pos {
     let mut new_robot_pos = robot_pos;
-    let move_dir = match dir {
-        '^' => Velocity { x: 0, y: -1 },
-        'v' => Velocity { x: 0, y: 1 },
-        '<' => Velocity { x: -1, y: 0 },
-        '>' => Velocity { x: 1, y: 0 },
-        _ => panic!("char '{}'", dir),
-    };
+    let move_dir = Velocity::from(dir);
     let mut cursor = robot_pos.add_velocity(&move_dir);
     loop {
         match grid[cursor.y][cursor.x] {
@@ -75,13 +92,9 @@ fn try_move_robot(grid: &mut Grid, robot_pos: Pos, dir: Action) -> Pos {
     new_robot_pos
 }
 
-fn gps_coordinate(position: Pos) -> usize {
-    100 * position.y + position.x
-}
-
 fn solve_part_1(input: &str) {
     let (mut grid, actions) = parse_input(input);
-    let mut robot_pos = Pos { x: 0, y: 0 };
+    let mut robot_pos = Pos::ZERO;
     'full_loop: for y in 0..grid.len() {
         for x in 0..grid[0].len() {
             if grid[y][x] == '@' {
@@ -98,7 +111,7 @@ fn solve_part_1(input: &str) {
     for y in 0..grid.len() {
         for x in 0..grid[0].len() {
             if grid[y][x] == 'O' {
-                sum += gps_coordinate(Pos { x, y })
+                sum += Pos { x, y }.gps();
             }
         }
     }
@@ -122,17 +135,15 @@ fn parse_input_v2(input: &str) -> (Grid, Vec<Action>) {
 }
 
 fn can_move_box(grid: &Grid, box_pos: Pos, v: Velocity) -> bool {
-    match (v.x, v.y) {
-        (0, _) => {
+    match v {
+        Velocity { x: 0, .. } => {
             let v_left = box_pos.add_velocity(&v);
-            let v_right = box_pos
-                .add_velocity(&Velocity { x: 1, y: 0 })
-                .add_velocity(&v);
+            let v_right = box_pos.add_velocity(&Velocity::RIGHT).add_velocity(&v);
             let ok_left = match grid[v_left.y][v_left.x] {
                 '.' => true,
                 '#' => false,
                 '[' => can_move_box(grid, v_left, v),
-                ']' => can_move_box(grid, v_left.add_velocity(&Velocity { x: -1, y: 0 }), v),
+                ']' => can_move_box(grid, v_left.add_velocity(&Velocity::LEFT), v),
                 _ => panic!(),
             };
             let ok_right = match grid[v_right.y][v_right.x] {
@@ -160,16 +171,14 @@ fn can_move_box(grid: &Grid, box_pos: Pos, v: Velocity) -> bool {
 }
 
 fn move_box(grid: &mut Grid, box_pos: Pos, v: Velocity) -> () {
-    match (v.x, v.y) {
-        (0, _) => {
+    match v {
+        Velocity { x: 0, .. } => {
             let v_left = box_pos.add_velocity(&v);
-            let v_right = box_pos
-                .add_velocity(&Velocity { x: 1, y: 0 })
-                .add_velocity(&v);
+            let v_right = box_pos.add_velocity(&Velocity::RIGHT).add_velocity(&v);
             match grid[v_left.y][v_left.x] {
                 '.' => (),
                 '[' => move_box(grid, v_left, v),
-                ']' => move_box(grid, v_left.add_velocity(&Velocity { x: -1, y: 0 }), v),
+                ']' => move_box(grid, v_left.add_velocity(&Velocity::LEFT), v),
                 _ => panic!(),
             };
             match grid[v_right.y][v_right.x] {
@@ -205,13 +214,7 @@ fn move_box(grid: &mut Grid, box_pos: Pos, v: Velocity) -> () {
 
 fn try_move_robot_v2(grid: &mut Grid, robot_pos: Pos, dir: Action) -> Pos {
     let mut new_robot_pos = robot_pos;
-    let move_dir = match dir {
-        '^' => Velocity { x: 0, y: -1 },
-        'v' => Velocity { x: 0, y: 1 },
-        '<' => Velocity { x: -1, y: 0 },
-        '>' => Velocity { x: 1, y: 0 },
-        _ => panic!("char '{}'", dir),
-    };
+    let move_dir = Velocity::from(dir);
     let cursor = robot_pos.add_velocity(&move_dir);
     if match grid[cursor.y][cursor.x] {
         '[' => {
@@ -250,7 +253,7 @@ fn try_move_robot_v2(grid: &mut Grid, robot_pos: Pos, dir: Action) -> Pos {
 fn solve_part_2(input: &str) {
     let (mut grid, actions) = parse_input_v2(input);
 
-    let mut robot_pos = Pos { x: 0, y: 0 };
+    let mut robot_pos = Pos::ZERO;
     'full_loop: for y in 0..grid.len() {
         for x in 0..grid[0].len() {
             if grid[y][x] == '@' {
@@ -268,7 +271,7 @@ fn solve_part_2(input: &str) {
     for y in 0..grid.len() {
         for x in 0..grid[0].len() {
             if grid[y][x] == '[' {
-                sum += gps_coordinate(Pos { x, y })
+                sum += Pos { x, y }.gps();
             }
         }
     }
