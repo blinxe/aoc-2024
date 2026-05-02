@@ -1,4 +1,7 @@
-use std::{collections::HashMap, ops::Index};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Index,
+};
 
 use crate::utils::input::read_input;
 
@@ -15,6 +18,26 @@ enum Direction {
     West,
 }
 use Direction::*;
+
+impl Direction {
+    pub const ALL: [Direction; 4] = [North, South, East, West];
+
+    fn reversed(&self) -> Self {
+        match self {
+            North => South,
+            South => North,
+            East => West,
+            West => East,
+        }
+    }
+
+    fn turns(&self) -> [(Self, Cost); 3] {
+        match self {
+            North | South => [(*self, 1), (East, 1001), (West, 1001)],
+            East | West => [(*self, 1), (North, 1001), (South, 1001)],
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 struct Pos {
@@ -58,7 +81,7 @@ impl Index<Pos> for Grid {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Path {
     pos: Pos,
     dir: Direction,
@@ -66,29 +89,15 @@ struct Path {
 }
 
 fn get_path_next_paths(grid: &Grid, p: &Path) -> Vec<Path> {
-    let turns = match p.dir {
-        North | South => [East, West],
-        East | West => [North, South],
-    };
-
     let mut next_paths = Vec::new();
 
-    let new_pos = p.pos.moved(p.dir);
-    if grid[new_pos] == '.' {
-        next_paths.push(Path {
-            pos: new_pos,
-            cost: p.cost + 1,
-            dir: p.dir,
-        });
-    }
-
-    for t in turns {
-        let new_pos = p.pos.moved(t);
+    for (turn, cost) in p.dir.turns() {
+        let new_pos = p.pos.moved(turn);
         if grid[new_pos] == '.' {
             next_paths.push(Path {
                 pos: new_pos,
-                cost: p.cost + 1001,
-                dir: t,
+                cost: p.cost + cost,
+                dir: turn,
             });
         }
     }
@@ -117,9 +126,7 @@ fn parse_input(input: &str) -> (Grid, Pos, Pos) {
     (grid, start, end)
 }
 
-fn solve_part_1(input: &str) {
-    let (grid, start, end) = parse_input(input);
-
+fn map_shortest_path(grid: &Grid, start: Pos) -> HashMap<(Pos, Direction), Cost> {
     let mut paths = vec![Path {
         pos: start,
         dir: East,
@@ -153,15 +160,103 @@ fn solve_part_1(input: &str) {
         paths = new_paths;
     }
 
-    let min = [North, South, East, West]
+    map
+}
+
+fn solve_part_1(input: &str) {
+    let (grid, start, end) = parse_input(input);
+    let solution = map_shortest_path(&grid, start);
+    let min = Direction::ALL
         .iter()
-        .filter_map(|d| map.get(&(end, *d)))
+        .filter_map(|d| solution.get(&(end, *d)))
         .min()
         .unwrap();
     println!("Score: {}", min);
 }
 
-fn solve_part_2(input: &str) {}
+fn get_parent_best_paths(solution: &HashMap<(Pos, Direction), Cost>, p: &Path) -> Vec<Path> {
+    let mut paths = Vec::new();
+
+    // parent of current p
+    let pos = p.pos.moved(p.dir.reversed());
+    // println!("Path: {:?} - parent: {:?}", p, pos);
+
+    // which paths from parent allow moving to p with optimal cost
+    for (turn, added_cost) in p.dir.turns() {
+        let (expected_cost, overflow) = p.cost.overflowing_sub(added_cost);
+        if overflow {
+            continue;
+        }
+        // println!(
+        //     "looking for {:?}/{:?}, got {:?}",
+        //     turn,
+        //     p.cost.saturating_sub(added_cost),
+        //     solution.get(&(pos, turn))
+        // );
+        if solution
+            .get(&(pos, turn))
+            .is_some_and(|&cost| cost == expected_cost)
+        {
+            paths.push(Path {
+                pos,
+                dir: turn,
+                cost: expected_cost,
+            });
+        }
+    }
+
+    paths
+}
+
+fn visit_best(solution: &HashMap<(Pos, Direction), Cost>, end: Pos) -> HashSet<Pos> {
+    let mut set = HashSet::new();
+
+    // get min score at end
+    let min = Direction::ALL
+        .iter()
+        .filter_map(|d| solution.get(&(end, *d)))
+        .min()
+        .unwrap();
+
+    // keep any of the 4 possible paths that reach end with min score
+    let mut paths: HashSet<_> = Direction::ALL
+        .iter()
+        .filter_map(|d| {
+            if solution.get(&(end, *d))? == min {
+                Some(Path {
+                    pos: end,
+                    dir: *d,
+                    cost: *min,
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // while we can go back
+    while !paths.is_empty() {
+        let mut prev_paths = HashSet::new();
+        // for each of the optimal paths
+        for p in paths.iter() {
+            // mark its position
+            set.insert(p.pos);
+            // get its parent's optimal paths for next turn
+            prev_paths.extend(get_parent_best_paths(solution, &p));
+        }
+        paths = prev_paths;
+    }
+
+    set
+}
+
+fn solve_part_2(input: &str) {
+    let (grid, start, end) = parse_input(input);
+    let solution = map_shortest_path(&grid, start);
+    let best = visit_best(&solution, end);
+
+    println!("Best paths tiles: {}", 1 + best.len()); // start not included
+}
 
 pub fn part_1() {
     let input = read_input(module_path!());
