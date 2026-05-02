@@ -56,18 +56,18 @@ impl Pos {
         match dir {
             North => Pos {
                 x: self.x,
-                y: self.y.saturating_add_signed(-1),
+                y: self.y - 1,
             },
             South => Pos {
                 x: self.x,
-                y: self.y.saturating_add_signed(1),
+                y: self.y + 1,
             },
             East => Pos {
-                x: self.x.saturating_add_signed(1),
+                x: self.x + 1,
                 y: self.y,
             },
             West => Pos {
-                x: self.x.saturating_add_signed(-1),
+                x: self.x - 1,
                 y: self.y,
             },
         }
@@ -91,13 +91,13 @@ struct Path {
 fn get_path_next_paths(grid: &Grid, p: &Path) -> Vec<Path> {
     let mut next_paths = Vec::new();
 
-    for (turn, cost) in p.dir.turns() {
-        let new_pos = p.pos.moved(turn);
+    for (dir, added_cost) in p.dir.turns() {
+        let new_pos = p.pos.moved(dir);
         if grid[new_pos] == '.' {
             next_paths.push(Path {
                 pos: new_pos,
-                cost: p.cost + cost,
-                dir: turn,
+                cost: p.cost + added_cost,
+                dir,
             });
         }
     }
@@ -182,25 +182,24 @@ fn get_parent_best_paths(solution: &HashMap<(Pos, Direction), Cost>, p: &Path) -
     // println!("Path: {:?} - parent: {:?}", p, pos);
 
     // which paths from parent allow moving to p with optimal cost
-    for (turn, added_cost) in p.dir.turns() {
-        let (expected_cost, overflow) = p.cost.overflowing_sub(added_cost);
-        if overflow {
+    for (dir, added_cost) in p.dir.turns() {
+        if p.cost < added_cost {
             continue;
         }
         // println!(
         //     "looking for {:?}/{:?}, got {:?}",
         //     turn,
-        //     p.cost.saturating_sub(added_cost),
+        //     p.cost - added_cost,
         //     solution.get(&(pos, turn))
         // );
         if solution
-            .get(&(pos, turn))
-            .is_some_and(|&cost| cost == expected_cost)
+            .get(&(pos, dir))
+            .is_some_and(|&cost| cost == p.cost - added_cost)
         {
             paths.push(Path {
                 pos,
-                dir: turn,
-                cost: expected_cost,
+                dir,
+                cost: p.cost - added_cost,
             });
         }
     }
