@@ -39,15 +39,13 @@ impl Direction {
     }
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq)]
 struct Pos {
     x: Coord,
     y: Coord,
 }
 
 impl Pos {
-    const ZERO: Self = Pos { x: 0, y: 0 };
-
     fn new(x: Coord, y: Coord) -> Self {
         Self { x, y }
     }
@@ -107,8 +105,8 @@ fn get_path_next_paths(grid: &Grid, p: &Path) -> Vec<Path> {
 
 fn parse_input(input: &str) -> (Grid, Pos, Pos) {
     let mut grid: Grid = input.lines().map(|l| l.chars().collect()).collect();
-    let mut start = Pos::ZERO;
-    let mut end = Pos::ZERO;
+    let mut start = Pos::default();
+    let mut end = Pos::default();
 
     for y in 0..grid.len() {
         for x in 0..grid[0].len() {
