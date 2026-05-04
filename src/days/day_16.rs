@@ -86,23 +86,6 @@ struct Path {
     cost: Cost,
 }
 
-fn get_path_next_paths(grid: &Grid, p: &Path) -> Vec<Path> {
-    let mut next_paths = Vec::new();
-
-    for (dir, added_cost) in p.dir.turns() {
-        let new_pos = p.pos.moved(dir);
-        if grid[new_pos] == '.' {
-            next_paths.push(Path {
-                pos: new_pos,
-                cost: p.cost + added_cost,
-                dir,
-            });
-        }
-    }
-
-    next_paths
-}
-
 fn parse_input(input: &str) -> (Grid, Pos, Pos) {
     let mut grid: Grid = input.lines().map(|l| l.chars().collect()).collect();
     let mut start = Pos::default();
@@ -124,6 +107,23 @@ fn parse_input(input: &str) -> (Grid, Pos, Pos) {
     (grid, start, end)
 }
 
+fn get_path_next_paths(grid: &Grid, p: &Path) -> Vec<Path> {
+    let mut next_paths = Vec::new();
+
+    for (dir, added_cost) in p.dir.turns() {
+        let new_pos = p.pos.moved(dir);
+        if grid[new_pos] == '.' {
+            next_paths.push(Path {
+                pos: new_pos,
+                cost: p.cost + added_cost,
+                dir,
+            });
+        }
+    }
+
+    next_paths
+}
+
 fn map_shortest_path(grid: &Grid, start: Pos) -> HashMap<(Pos, Direction), Cost> {
     let mut paths = vec![Path {
         pos: start,
@@ -132,22 +132,24 @@ fn map_shortest_path(grid: &Grid, start: Pos) -> HashMap<(Pos, Direction), Cost>
     }];
 
     let mut map = HashMap::<(Pos, Direction), Cost>::new();
+    map.insert((start, East), 0);
 
     loop {
         let mut new_paths = Vec::new();
         for p in paths {
             for next in get_path_next_paths(&grid, &p) {
-                let key = &(next.pos, next.dir);
-                if !map.contains_key(key) {
-                    map.insert(*key, next.cost);
-                } else {
-                    let prev_cost = map.get(key).unwrap();
-                    if next.cost < *prev_cost {
-                        map.insert(*key, next.cost);
-                    } else {
+                let key = (next.pos, next.dir);
+                if map.contains_key(&key) {
+                    // path already visited
+                    let prev_cost = *map.get(&key).unwrap();
+                    if next.cost >= prev_cost {
+                        // it's not an improvement, do not re-process successors
                         continue;
-                    } // don't keep this path for next step
+                    }
                 }
+                // it's a first visit, or an improvement
+                map.insert(key, next.cost);
+                // add successors to be processed
                 new_paths.push(next);
             }
         }
@@ -252,7 +254,7 @@ fn solve_part_2(input: &str) {
     let solution = map_shortest_path(&grid, start);
     let best = visit_best(&solution, end);
 
-    println!("Best paths tiles: {}", 1 + best.len()); // start not included
+    println!("Best paths tiles: {}", best.len());
 }
 
 pub fn part_1() {
