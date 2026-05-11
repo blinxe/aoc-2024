@@ -21,37 +21,15 @@ enum InstructionResult {
 
 impl VirtualMachine {
     fn new(input: &str) -> Self {
-        let mut iter_lines = input.lines();
-        let a = iter_lines
-            .next()
-            .unwrap()
-            .split(": ")
-            .last()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let b = iter_lines
-            .next()
-            .unwrap()
-            .split(": ")
-            .last()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let c = iter_lines
-            .next()
-            .unwrap()
-            .split(": ")
-            .last()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let program = iter_lines
-            .last()
-            .unwrap()
-            .split(": ")
-            .last()
-            .unwrap()
+        fn _next_value<'a>(iter: &'a mut core::str::Lines) -> &'a str {
+            iter.next().unwrap().split(": ").last().unwrap()
+        }
+        let mut lines = input.lines();
+        let a = _next_value(&mut lines).parse().unwrap();
+        let b = _next_value(&mut lines).parse().unwrap();
+        let c = _next_value(&mut lines).parse().unwrap();
+        lines.next(); // skip empty line
+        let program = _next_value(&mut lines)
             .split(',')
             .map(|c| c.parse::<Opcode>().unwrap())
             .collect();
