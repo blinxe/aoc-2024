@@ -12,12 +12,6 @@ struct VirtualMachine {
     program: Vec<Opcode>,
     output: Vec<u8>,
 }
-#[derive(PartialEq)]
-enum InstructionResult {
-    Continue,
-    EndOfOperation,
-    Abort,
-}
 
 impl VirtualMachine {
     fn new(input: &str) -> Self {
@@ -65,61 +59,47 @@ impl VirtualMachine {
         }
     }
 
-    fn run_adv(&mut self) -> InstructionResult {
+    fn run_adv(&mut self) {
         let num = self.a;
         let denom = 1 << self.get_combo_operand();
         self.a = num / denom;
-        InstructionResult::Continue
     }
-    fn run_bxl(&mut self) -> InstructionResult {
+    fn run_bxl(&mut self) {
         self.b = self.b ^ (self.program[self.pc] as usize);
         self.pc += 1;
-        InstructionResult::Continue
     }
-    fn run_bst(&mut self) -> InstructionResult {
+    fn run_bst(&mut self) {
         self.b = self.get_combo_operand() % 8;
-        InstructionResult::Continue
     }
-    fn run_jnz(&mut self) -> InstructionResult {
+    fn run_jnz(&mut self) {
         if self.a != 0 {
             self.pc = self.program[self.pc] as usize;
         } else {
             self.pc += 1;
         }
-        InstructionResult::Continue
     }
-    fn run_bxc(&mut self) -> InstructionResult {
+    fn run_bxc(&mut self) {
         self.b = self.b ^ self.c;
         self.pc += 1; // legacy
-        InstructionResult::Continue
     }
-    fn run_out(&mut self, check_output: bool) -> InstructionResult {
+    fn run_out(&mut self) {
         let n = (self.get_combo_operand() % 8) as u8;
-
-        if check_output {
-            if self.program[self.output.len()] != n {
-                return InstructionResult::Abort;
-            }
-        }
         self.output.push(n);
-        InstructionResult::Continue
     }
-    fn run_bdv(&mut self) -> InstructionResult {
+    fn run_bdv(&mut self) {
         let num = self.a;
         let denom = 1 << self.get_combo_operand();
         self.b = num / denom;
-        InstructionResult::Continue
     }
-    fn run_cdv(&mut self) -> InstructionResult {
+    fn run_cdv(&mut self) {
         let num = self.a;
         let denom = 1 << self.get_combo_operand();
         self.c = num / denom;
-        InstructionResult::Continue
     }
 
-    fn run_instruction(&mut self, check_output: bool) -> InstructionResult {
+    fn run_instruction(&mut self) -> bool {
         if self.pc >= self.program.len() {
-            return InstructionResult::EndOfOperation;
+            return false;
         }
         let instruction = self.program[self.pc];
         self.pc += 1;
@@ -129,28 +109,24 @@ impl VirtualMachine {
             2 => self.run_bst(),
             3 => self.run_jnz(),
             4 => self.run_bxc(),
-            5 => self.run_out(check_output),
+            5 => self.run_out(),
             6 => self.run_bdv(),
             7 => self.run_cdv(),
             _ => panic!(),
         }
+
+        true
     }
 
-    fn run_program(&mut self, check_output: bool) -> InstructionResult {
-        loop {
-            match self.run_instruction(check_output) {
-                InstructionResult::Continue => (),
-                InstructionResult::EndOfOperation => return InstructionResult::EndOfOperation,
-                InstructionResult::Abort => return InstructionResult::Abort,
-            }
-        }
+    fn run_program(&mut self) {
+        while self.run_instruction() {}
     }
 }
 
 fn solve_part_1(input: &str) {
     let mut vm = VirtualMachine::new(input);
     println!("{:?}", vm);
-    vm.run_program(false);
+    vm.run_program();
     let output_str = vm
         .output
         .iter()
@@ -171,7 +147,7 @@ fn recurse(vm: &mut VirtualMachine, a_od: &mut [u8], index: usize) -> bool {
     for digit in start..=7 {
         a_od[index] = digit;
         vm.reset(get_number_from_octal_digits(&a_od));
-        vm.run_program(false);
+        vm.run_program();
         if vm.output[vm.program.len() - index - 1] != vm.program[vm.program.len() - index - 1] {
             continue;
         }
