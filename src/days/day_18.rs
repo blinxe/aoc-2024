@@ -20,7 +20,6 @@ struct Elt {
 }
 struct Grid {
     data: Vec<Vec<Elt>>,
-    size: usize,
 }
 
 impl Pos {
@@ -42,7 +41,6 @@ impl Grid {
                 ];
                 size
             ],
-            size,
         }
     }
 }
