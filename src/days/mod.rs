@@ -17,7 +17,7 @@ mod day_16;
 mod day_17;
 mod day_18;
 mod day_19;
-// mod day_20;
+mod day_20;
 // mod day_21;
 // mod day_22;
 // mod day_23;
@@ -44,7 +44,7 @@ pub const ALL_DAYS: &[(fn(), fn())] = &[
     (day_17::part_1, day_17::part_2),
     (day_18::part_1, day_18::part_2),
     (day_19::part_1, day_19::part_2),
-    // (day_20::part_1, day_20::part_2),
+    (day_20::part_1, day_20::part_2),
     // (day_21::part_1, day_21::part_2),
     // (day_22::part_1, day_22::part_2),
     // (day_23::part_1, day_23::part_2),

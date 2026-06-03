@@ -36,7 +36,7 @@ fn solve_part_1(input: &str) {
 }
 
 #[memoize(Ignore: patterns)]
-fn count_matches(patterns: &Vec<Pattern>, input: String) -> usize {
+fn count_matches(patterns: &[Pattern], input: String) -> usize {
     if input.is_empty() {
         return 1;
     }
