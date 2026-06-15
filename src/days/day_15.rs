@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use crate::utils::input::read_input;
 #[derive(PartialEq, Eq, Clone, Copy)]
 struct Pos {
@@ -15,15 +17,19 @@ type Grid = Vec<Vec<char>>;
 impl Pos {
     const ZERO: Self = Self { x: 0, y: 0 };
 
-    fn add_velocity(&self, velocity: &Velocity) -> Pos {
-        Pos {
-            x: (self.x as isize + velocity.x) as usize,
-            y: (self.y as isize + velocity.y) as usize,
-        }
-    }
-
     fn gps(&self) -> usize {
         100 * self.y + self.x
+    }
+}
+
+impl Add<Velocity> for Pos {
+    type Output = Pos;
+
+    fn add(self, rhs: Velocity) -> Self::Output {
+        Pos {
+            x: (self.x as isize + rhs.x) as usize,
+            y: (self.y as isize + rhs.y) as usize,
+        }
     }
 }
 
@@ -72,12 +78,12 @@ fn parse_input(input: &str) -> (Grid, Vec<Action>) {
 fn try_move_robot(grid: &mut Grid, robot_pos: Pos, dir: Action) -> Pos {
     let mut new_robot_pos = robot_pos;
     let move_dir = Velocity::from(dir);
-    let mut cursor = robot_pos.add_velocity(&move_dir);
+    let mut cursor = robot_pos + move_dir;
     loop {
         match grid[cursor.y][cursor.x] {
             'O' => (),
             '.' => {
-                new_robot_pos = robot_pos.add_velocity(&move_dir);
+                new_robot_pos = robot_pos + move_dir;
                 if grid[new_robot_pos.y][new_robot_pos.x] == 'O' {
                     grid[cursor.y][cursor.x] = 'O';
                     grid[new_robot_pos.y][new_robot_pos.x] = '.';
@@ -87,7 +93,7 @@ fn try_move_robot(grid: &mut Grid, robot_pos: Pos, dir: Action) -> Pos {
             '#' => break,
             _ => panic!(),
         }
-        cursor = cursor.add_velocity(&move_dir);
+        cursor = cursor + move_dir;
     }
     new_robot_pos
 }
@@ -137,13 +143,13 @@ fn parse_input_v2(input: &str) -> (Grid, Vec<Action>) {
 fn can_move_box(grid: &Grid, box_pos: Pos, v: Velocity) -> bool {
     match v {
         Velocity { x: 0, .. } => {
-            let v_left = box_pos.add_velocity(&v);
-            let v_right = box_pos.add_velocity(&Velocity::RIGHT).add_velocity(&v);
+            let v_left = box_pos + v;
+            let v_right = box_pos + Velocity::RIGHT + v;
             let ok_left = match grid[v_left.y][v_left.x] {
                 '.' => true,
                 '#' => false,
                 '[' => can_move_box(grid, v_left, v),
-                ']' => can_move_box(grid, v_left.add_velocity(&Velocity::LEFT), v),
+                ']' => can_move_box(grid, v_left + Velocity::LEFT, v),
                 _ => panic!(),
             };
             let ok_right = match grid[v_right.y][v_right.x] {
@@ -156,9 +162,9 @@ fn can_move_box(grid: &Grid, box_pos: Pos, v: Velocity) -> bool {
             ok_left && ok_right
         }
         _ => {
-            let mut neighboor = box_pos.add_velocity(&v);
+            let mut neighboor = box_pos + v;
             if grid[neighboor.y][neighboor.x] == ']' {
-                neighboor = neighboor.add_velocity(&v);
+                neighboor = neighboor + v;
             }
             match grid[neighboor.y][neighboor.x] {
                 '[' => can_move_box(grid, neighboor, v),
@@ -173,12 +179,12 @@ fn can_move_box(grid: &Grid, box_pos: Pos, v: Velocity) -> bool {
 fn move_box(grid: &mut Grid, box_pos: Pos, v: Velocity) -> () {
     match v {
         Velocity { x: 0, .. } => {
-            let v_left = box_pos.add_velocity(&v);
-            let v_right = box_pos.add_velocity(&Velocity::RIGHT).add_velocity(&v);
+            let v_left = box_pos + v;
+            let v_right = box_pos + Velocity::RIGHT + v;
             match grid[v_left.y][v_left.x] {
                 '.' => (),
                 '[' => move_box(grid, v_left, v),
-                ']' => move_box(grid, v_left.add_velocity(&Velocity::LEFT), v),
+                ']' => move_box(grid, v_left + Velocity::LEFT, v),
                 _ => panic!(),
             };
             match grid[v_right.y][v_right.x] {
@@ -192,9 +198,9 @@ fn move_box(grid: &mut Grid, box_pos: Pos, v: Velocity) -> () {
             grid[box_pos.y][box_pos.x + 1] = '.';
         }
         _ => {
-            let mut neighboor = box_pos.add_velocity(&v);
+            let mut neighboor = box_pos + v;
             if grid[neighboor.y][neighboor.x] == ']' {
-                neighboor = neighboor.add_velocity(&v);
+                neighboor = neighboor + v;
             }
             match grid[neighboor.y][neighboor.x] {
                 '[' => move_box(grid, neighboor, v),
@@ -215,7 +221,7 @@ fn move_box(grid: &mut Grid, box_pos: Pos, v: Velocity) -> () {
 fn try_move_robot_v2(grid: &mut Grid, robot_pos: Pos, dir: Action) -> Pos {
     let mut new_robot_pos = robot_pos;
     let move_dir = Velocity::from(dir);
-    let cursor = robot_pos.add_velocity(&move_dir);
+    let cursor = robot_pos + move_dir;
     if match grid[cursor.y][cursor.x] {
         '[' => {
             if can_move_box(grid, cursor, move_dir) {
@@ -226,16 +232,8 @@ fn try_move_robot_v2(grid: &mut Grid, robot_pos: Pos, dir: Action) -> Pos {
             }
         }
         ']' => {
-            if can_move_box(
-                grid,
-                cursor.add_velocity(&Velocity { x: -1, y: 0 }),
-                move_dir,
-            ) {
-                move_box(
-                    grid,
-                    cursor.add_velocity(&Velocity { x: -1, y: 0 }),
-                    move_dir,
-                );
+            if can_move_box(grid, cursor + Velocity::LEFT, move_dir) {
+                move_box(grid, cursor + Velocity::LEFT, move_dir);
                 true
             } else {
                 false
